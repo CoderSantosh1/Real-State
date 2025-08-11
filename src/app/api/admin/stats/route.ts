@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import Property from '@/models/Property';
 import User from '@/models/User';
 
 // GET /api/admin/stats - Get dashboard statistics
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await connectToDatabase();
     

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { 
   Search, 
-  Filter, 
   MapPin, 
   Bed, 
   Bath, 
@@ -51,7 +50,7 @@ interface Pagination {
   hasPreviousPage: boolean;
 }
 
-export default function PropertiesPage() {
+function PropertiesContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
@@ -72,16 +71,7 @@ export default function PropertiesPage() {
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    fetchProperties();
-  }, [currentPage]);
-
-  useEffect(() => {
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
-  }, [searchQuery, selectedCity, selectedType, selectedListingType, minPrice, maxPrice]);
-
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -132,7 +122,16 @@ export default function PropertiesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedCity, selectedType, selectedListingType, minPrice, maxPrice, currentPage]);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
+
+  useEffect(() => {
+    // Reset to page 1 when filters change
+    setCurrentPage(1);
+  }, [searchQuery, selectedCity, selectedType, selectedListingType, minPrice, maxPrice]);
 
   const handleSearch = () => {
     fetchProperties();
@@ -412,5 +411,20 @@ export default function PropertiesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading properties...</p>
+        </div>
+      </div>
+    }>
+      <PropertiesContent />
+    </Suspense>
   );
 }

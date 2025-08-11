@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 
 // GET /api/test-db - Test database connection
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Testing database connection...');
     console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');

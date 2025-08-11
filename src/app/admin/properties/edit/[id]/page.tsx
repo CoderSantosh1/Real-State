@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -48,7 +48,6 @@ export default function EditPropertyPage() {
     register,
     handleSubmit,
     watch,
-    setValue,
     reset,
     formState: { errors }
   } = useForm<PropertyFormData>({
@@ -57,13 +56,7 @@ export default function EditPropertyPage() {
 
   const watchedListingType = watch('listingType');
 
-  useEffect(() => {
-    if (propertyId) {
-      fetchProperty();
-    }
-  }, [propertyId]);
-
-  const fetchProperty = async () => {
+  const fetchProperty = useCallback(async () => {
     try {
       setFetchingProperty(true);
       const response = await fetch(`/api/properties/${propertyId}`);
@@ -96,7 +89,7 @@ export default function EditPropertyPage() {
       
       // Set existing image previews
       if (propertyData.images && propertyData.images.length > 0) {
-        setImagePreviews(propertyData.images.map((img: any) => img.url));
+        setImagePreviews(propertyData.images.map((img: { url: string }) => img.url));
       }
       
     } catch (error) {
@@ -106,7 +99,13 @@ export default function EditPropertyPage() {
     } finally {
       setFetchingProperty(false);
     }
-  };
+  }, [propertyId, router, reset]);
+
+  useEffect(() => {
+    if (propertyId) {
+      fetchProperty();
+    }
+  }, [propertyId, fetchProperty]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -246,7 +245,7 @@ export default function EditPropertyPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Property Not Found</h1>
-          <p className="text-gray-600 mb-4">The property you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">The property you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/admin"
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -691,6 +690,7 @@ export default function EditPropertyPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}

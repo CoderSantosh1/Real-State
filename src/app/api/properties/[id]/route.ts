@@ -6,10 +6,11 @@ import { propertySchema } from '@/lib/validations';
 // GET single property by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const propertyId = params.id;
+    const resolvedParams = await params;
+    const propertyId = resolvedParams.id;
     
     if (!propertyId || propertyId.length !== 24) {
       return NextResponse.json(
@@ -40,9 +41,17 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching property:', error);
     
-    // Return mock data if database connection fails
+    // Return mock data if database connection fails - fallback when params can't be resolved
+    let fallbackId;
+    try {
+      const resolvedParams = await params;
+      fallbackId = resolvedParams.id;
+    } catch {
+      fallbackId = 'sample-id';
+    }
+    
     const mockProperty = {
-      _id: params.id,
+      _id: fallbackId,
       title: 'Sample Property',
       description: 'This is a sample property for demonstration purposes.',
       price: 750000,
@@ -97,10 +106,11 @@ export async function GET(
 // UPDATE property by ID
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const propertyId = params.id;
+    const resolvedParams = await params;
+    const propertyId = resolvedParams.id;
     
     if (!propertyId || propertyId.length !== 24) {
       return NextResponse.json(
@@ -117,7 +127,7 @@ export async function PUT(
       return NextResponse.json(
         { 
           error: 'Validation failed',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       );
@@ -160,13 +170,25 @@ export async function PUT(
       );
     }
 
+    // Get propertyId for fallback response
+    let fallbackId;
+    let fallbackBody;
+    try {
+      const resolvedParams = await params;
+      fallbackId = resolvedParams.id;
+      fallbackBody = await request.json();
+    } catch {
+      fallbackId = 'sample-id';
+      fallbackBody = {};
+    }
+
     // For demo purposes, return success even if database fails
     return NextResponse.json({
       success: true,
       message: 'Property updated successfully (using mock response)',
       property: {
-        _id: propertyId,
-        ...body,
+        _id: fallbackId,
+        ...fallbackBody,
         updatedAt: new Date().toISOString()
       },
       note: 'Mock response due to database connection issues'
@@ -177,10 +199,11 @@ export async function PUT(
 // DELETE property by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const propertyId = params.id;
+    const resolvedParams = await params;
+    const propertyId = resolvedParams.id;
     
     if (!propertyId || propertyId.length !== 24) {
       return NextResponse.json(

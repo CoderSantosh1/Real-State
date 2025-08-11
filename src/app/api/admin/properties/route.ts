@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import Property from '@/models/Property';
-import jwt from 'jsonwebtoken';
 
-// Middleware to verify JWT token
-function verifyToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return null;
-  }
-  
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET!) as any;
-  } catch {
-    return null;
-  }
-}
+// Commented out for demo purposes - uncomment for production
+// function verifyToken(request: NextRequest): JWTPayload | null {
+//   const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '');
+//   
+//   if (!token) {
+//     return null;
+//   }
+//   
+//   try {
+//     return jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+//   } catch {
+//     return null;
+//   }
+// }
 
 // GET /api/admin/properties - Get all properties for admin
 export async function GET(request: NextRequest) {
@@ -39,7 +38,16 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all';
     
     // Build query
-    const query: any = {};
+    interface QueryFilter {
+      $or?: Array<{
+        title?: { $regex: string; $options: string };
+        'location.city'?: { $regex: string; $options: string };
+      }>;
+      status?: string;
+      [key: string]: unknown;
+    }
+    
+    const query: QueryFilter = {};
     
     if (search) {
       query.$or = [

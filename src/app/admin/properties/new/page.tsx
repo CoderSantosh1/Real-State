@@ -35,7 +35,6 @@ export default function NewPropertyPage() {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors }
   } = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
@@ -592,6 +591,7 @@ export default function NewPropertyPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}

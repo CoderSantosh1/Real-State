@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import Property from '@/models/Property';
-import User from '@/models/User';
 import { propertySchema, searchSchema } from '@/lib/validations';
 import { ZodError } from 'zod';
-import jwt from 'jsonwebtoken';
 
-// Middleware to verify JWT token
-function verifyToken(request: NextRequest) {
-  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return null;
-  }
-  
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET!) as any;
-  } catch {
-    return null;
-  }
-}
+// Commented out for demo purposes - uncomment for production
+// function verifyToken(request: NextRequest): JWTPayload | null {
+//   const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '');
+//   
+//   if (!token) {
+//     return null;
+//   }
+//   
+//   try {
+//     return jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+//   } catch {
+//     return null;
+//   }
+// }
 
 // GET /api/properties - Get all properties with search and filtering
 export async function GET(request: NextRequest) {
@@ -50,7 +48,36 @@ export async function GET(request: NextRequest) {
     const validatedSearch = searchSchema.parse(searchData);
     
     // Build MongoDB query
-    const query: any = { status: 'active' };
+    interface QueryFilter {
+      status: string;
+      $or?: Array<{
+        title?: { $regex: string; $options: string };
+        description?: { $regex: string; $options: string };
+        'location.address'?: { $regex: string; $options: string };
+      }>;
+      'location.city'?: { $regex: string; $options: string };
+      propertyType?: string;
+      listingType?: string;
+      price?: {
+        $gte?: number;
+        $lte?: number;
+      };
+      'features.bedrooms'?: {
+        $gte?: number;
+        $lte?: number;
+      };
+      'features.bathrooms'?: {
+        $gte?: number;
+        $lte?: number;
+      };
+      'features.area'?: {
+        $gte?: number;
+        $lte?: number;
+      };
+      [key: string]: unknown;
+    }
+    
+    const query: QueryFilter = { status: 'active' };
     
     if (validatedSearch.query) {
       query.$or = [
@@ -145,7 +172,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: 'Invalid search parameters', details: error.errors },
+        { error: 'Invalid search parameters', details: error.issues },
         { status: 400 }
       );
     }
@@ -250,48 +277,16 @@ export async function GET(request: NextRequest) {
       }
     ];
     
-    // Apply basic filtering to mock data if search params exist
-    let filteredProperties = mockProperties;
-    
-    if (validatedSearch.city) {
-      filteredProperties = filteredProperties.filter(p => 
-        p.location.city.toLowerCase().includes(validatedSearch.city!.toLowerCase())
-      );
-    }
-    
-    if (validatedSearch.propertyType) {
-      filteredProperties = filteredProperties.filter(p => p.propertyType === validatedSearch.propertyType);
-    }
-    
-    if (validatedSearch.listingType) {
-      filteredProperties = filteredProperties.filter(p => p.listingType === validatedSearch.listingType);
-    }
-    
-    if (validatedSearch.query) {
-      filteredProperties = filteredProperties.filter(p => 
-        p.title.toLowerCase().includes(validatedSearch.query!.toLowerCase()) ||
-        p.location.city.toLowerCase().includes(validatedSearch.query!.toLowerCase())
-      );
-    }
-    
-    // Apply pagination
-    const page = validatedSearch.page || 1;
-    const limit = validatedSearch.limit || 12;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
-    
-    const totalPages = Math.ceil(filteredProperties.length / limit);
-    
+    // Return all mock properties since we can't validate search params in error case
     return NextResponse.json({
-      properties: paginatedProperties,
+      properties: mockProperties.slice(0, 12), // Return first 12 properties
       pagination: {
-        currentPage: page,
-        totalPages,
-        totalCount: filteredProperties.length,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
-        limit
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: mockProperties.length,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        limit: 12
       }
     });
   }
@@ -351,7 +346,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
